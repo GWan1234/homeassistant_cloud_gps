@@ -945,7 +945,11 @@ class OptionsFlow(config_entries.OptionsFlow):
                 {"value": KEY_MONTH_DIS, "label": "month_dis"},
                 {"value": KEY_YEAR_DIS, "label": "year_dis"}
             ]
-            SWITCHSLIST = []
+            SWITCHSLIST = [
+                {"value": "defence", "label": "defence"},
+                {"value": "defencemode", "label": "defencemode"},
+                {"value": "open_lock", "label": "open_lock"},
+            ]
             BUTTONSLIST = [
                 {"value": "nowtrack", "label": "nowtrack"}
             ]

@@ -101,6 +101,7 @@ class CloudGPSButtonEntity(ButtonEntity):
         self._unique_id = f"{self.coordinator.data[self._imei]['location_key']}-{description['label']}"
         self._attr_translation_key = f"{description['name']}"
         self._state = None
+        self._last_response = None
 
         if webhost == "tuqiang123.com":
             from .tuqiang123_data_fetcher import DataButton
@@ -158,23 +159,48 @@ class CloudGPSButtonEntity(ButtonEntity):
         if self._description.get("device_class"):
             return self._description["device_class"]
             
+    @property
+    def state_attributes(self): 
+        """Return the state attributes."""
+        attrs = {}
+        if self.coordinator.data.get(self._imei):            
+            attrs["querytime"] = self.coordinator.data[self._imei]["attrs"].get("querytime")
         
+        # 新增：将指令结果显示在属性中
+        if self._last_response:
+            attrs["last_response"] = self._last_response
+            
+        return attrs 
+
     def press(self) -> None:
         """Handle the button press."""
 
     async def async_press(self) -> None:
         """Handle the button press."""
+        resp = None
+        # 根据 webhost 和操作类型执行对应的 action
         if self._webhost == "hellobike.com" and self._description['label']=="bell":
-            self._state = await self._button._action("rent.order.bell")
+            resp = await self._button._action("rent.order.bell")
         elif self._webhost == "tuqiang123.com" and self._description['label']=="nowtrack":
-            self._state = await self._button._action("立即定位")
+            resp = await self._button._action("立即定位")
         elif self._webhost == "gps_mqtt" and self._description['label']=="nowtrack":
-            self._state = await self._button._action({"cmd":"dw"})
+            resp = await self._button._action({"cmd":"dw"})
         elif self._webhost == "gps_mqtt" and self._description['label']=="reboot":
-            self._state = await self._button._action({"cmd":"reboot"})
+            resp = await self._button._action({"cmd":"reboot"})
         elif self._webhost == "niu.com" and self._description['label']=="openseat":
-            self._state = await self._button._action("cushion_lock_on")
+            resp = await self._button._action("cushion_lock_on")
         
+        # 处理并记录响应
+        if resp:
+            # 如果 resp 是 dict，格式化为字符串；如果不是，原样记录
+            if isinstance(resp, dict):
+                self._last_response = f"Code: {resp.get('code', 'N/A')}, Msg: {resp.get('msg', 'N/A')}"
+            else:
+                self._last_response = str(resp)
+            _LOGGER.info("按钮 %s 操作结果: %s", self.entity_id, self._last_response)
+        
+        # 强制更新 UI 属性显示
+        self.async_write_ha_state()    
 
     async def async_added_to_hass(self):
         """Connect to dispatcher listening for entity data notifications."""
